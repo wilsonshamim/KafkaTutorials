@@ -1,0 +1,258 @@
+Simple Authentication and Security Layer (SASL) is a framework for authenticationand data security in Internet protocols. It decouples authentication mechanisms from application protocols, in theory allowing any authentication mechanism supported by SASL to be used in any application protocol that uses SASL.
+
+Add below properties in server.properties:
+listeners=PLAINTEXT://localhost:9093,SASL_SSL://localhost:9099
+security.inter.broker.protocol=SASL_SSL
+sasl.mechanism.inter.broker.protocol=PLAIN
+sasl.enabled.mechanisms=PLAIN
+
+authorizer.class.name=kafka.security.auth.SimpleAclAuthorizer
+allow.everyone.if.no.acl.found=true
+auto.create.topics.enable=true
+broker.id=1
+advertised.listeners=PLAINTEXT://localhost:9093,SASL_SSL://localhost:9099
+advertised.host.name=localhost
+auto.create.topics.enable=false
+auto.leader.rebalance.enable=true
+delete.topic.enable=true
+controlled.shutdown.enable=true
+
+ssl.keystore.location=/home/shamim/Confluent/security/kafka.server.keystore.jks
+ssl.keystore.password=pwd
+ssl.key.password=pwd
+ssl.truststore.location=/home/shamim/Confluent/security/kafka.server.truststore.jks
+ssl.truststore.password=pwd
+listener.security.protocol.map=PLAINTEXT:PLAINTEXT,SASL_SSL:SASL_SSL
+
+num.network.threads=3
+num.io.threads=8
+socket.send.buffer.bytes=102400
+socket.receive.buffer.bytes=102400
+socket.request.max.bytes=104857600
+
+num.partitions=1
+num.recovery.threads.per.data.dir=1
+log.flush.interval.messages=30000000
+log.flush.interval.ms=1800000
+log.retention.minutes=30
+log.segment.bytes=1073741824
+log.retention.check.interval.ms=300000
+delete.topic.enable=true
+zookeeper.connect=localhost:2181
+zookeeper.connection.timeout.ms=6000
+super.users=User:admin;User:ANONYMOUS
+
+
+security.protocol=SASL_SSL
+ssl.enabled.protocols=TLSv1.2,TLSv1.1,TLSv1
+ssl.truststore.type=JKS
+ssl.keystore.type = JKS
+ssl.secure.random.implementation=SHA1PRNG
+
+
+zookeeper.properties
+
+dataDir=/tmp/zookeeper
+clientPort=2181
+maxClientCnxns=0
+authProvider.1=org.apache.zookeeper.server.auth.SASLAuthenticationProvider
+requireClientAuthScheme=sasl
+jaasLoginRenew=3600000
+
+producer.properties
+
+security.protocol=SASL_SSL
+sasl.mechanism=PLAIN
+bootstrap.servers=localhost:9099
+compression.type=none
+sasl.kerberos.service.name=kafka
+
+ssl.truststore.location=/home/shamim/Confluent/security/kafka.client.truststore.jks
+ssl.truststore.password=pwd
+
+ssl.enabled.protocols=TLSv1.2,TLSv1.1,TLSv1
+ssl.truststore.type=JKS
+ssl.truststore.type = JKS
+
+ 
+
+kafka-rest_SASL_SSL.properties:
+
+security.protocol=SASL_SSL
+sasl.mechanism=PLAIN
+sasl.mechanism.inter.broker.protocol=PLAIN
+sasl.enabled.mechanisms=PLAIN
+bootstrap.servers=SASL_SSL://localhost:9099
+compression.type=none
+client.sasl.mechanism=PLAIN
+ssl.key.password = pwd
+ssl.truststore.password = pwd
+ssl.truststore.location = /home/shamim/Confluent/security/kafka.client.truststore.jks
+ssl.keystore.location = /home/shamim/Confluent/security/kafka.server.keystore.jks
+ssl.keystore.password=pwd
+
+client.ssl.truststore.password = pwd
+client.ssl.truststore.location = /home/shamim/Confluent/security/kafka.server.truststore.jks
+
+client.security.protocol=SASL_SSL
+client.ssl.protocol=TLSv1.1
+client.ssl.enabled.protocols=TLSv1.2,TLSv1.1,TLSv1
+client.ssl.keystore.type=JKS
+client.ssl.truststore.type = JKS
+client.connection.url=localhost:2181
+host.name=localhost
+
+ssl.protocol=TLSv1.1
+ssl.enabled.protocols=TLSv1.2,TLSv1.1,TLSv1
+ssl.keystore.type=JKS
+ssl.truststore.type = JKS
+client.ssl.key.password=pwd
+listeners = https://localhost:8086
+security.inter.broker.protocol = SSL
+
+ 
+
+
+consumer.properties
+
+security.protocol=SASL_SSL
+sasl.mechanism=PLAIN
+compression.type=none
+bootstrap.servers=localhost:2181
+group.id=test-consumer-group
+
+ssl.truststore.location=/home/shamim/Confluent/security/kafka.client.truststore.jks
+ssl.truststore.password=pwd
+ssl.enabled.protocols=TLSv1.2,TLSv1.1,TLSv1
+ssl.truststore.type=JKS
+ssl.truststore.type = JKS
+
+ 
+
+
+Now are the most important files for making your server starting without any issue:
+
+zookeeper_jaas.conf
+
+Server {
+   org.apache.kafka.common.security.plain.PlainLoginModule required
+   username="admin"
+   password="admin-secret"
+   user_admin="admin-secret";
+};
+kafka_server.jaas
+
+KafkaServer {
+   org.apache.kafka.common.security.plain.PlainLoginModule required
+   username="admin"
+   password="admin-secret"
+   user_admin="admin-secret";
+};
+
+Client {
+   org.apache.kafka.common.security.plain.PlainLoginModule required
+   username="admin"
+   password="admin-secret";
+};
+ 
+
+kafka_client_jaas.conf
+
+KafkaClient {
+  org.apache.kafka.common.security.plain.PlainLoginModule required
+  username="admin"
+  password="admin-secret";
+};
+kafka_rest_client_jaas.conf
+
+KafkaClient {
+  org.apache.kafka.common.security.plain.PlainLoginModule required
+  username="admin"
+  password="admin-secret";
+};
+ 
+
+kafka_topic_client_jaas.conf
+
+Client {
+  org.apache.kafka.common.security.plain.PlainLoginModule required
+  username="admin"
+  password="admin-secret";
+};
+kafka_acl_client_jaas.conf
+
+Client {
+  org.apache.kafka.common.security.plain.PlainLoginModule required
+  username="admin"
+  password="admin-secret";
+};
+
+add the below properties in zookeeper-server-start
+
+export KAFKA_OPTS="-Djava.security.auth.login.config=../etc/kafka/zookeeper_jaas.conf"
+
+add the below properties in kafka-server-start
+
+export KAFKA_OPTS="-Djava.security.auth.login.config=../etc/kafka/kafka_server_jaas.conf"
+
+add the below properties in kafka-console-producer and kafka-console-consumer
+
+export KAFKA_OPTS="-Djava.security.auth.login.config=../etc/kafka/kafka_client_jaas.conf"
+
+add the below properties in kafka-rest-start file:
+
+export KAFKAREST_OPTS="-Djava.security.auth.login.config=../etc/kafka/kafka_rest_client_jaas.conf"
+
+ 
+
+add the below properties in kafka-topic
+
+export KAFKA_OPTS="-Djava.security.auth.login.config=../etc/kafka/kafka_topic_client_jaas.conf"
+
+add the below properties in kafka-acl
+
+export KAFKA_OPTS="-Djava.security.auth.login.config=../etc/kafka/kafka_topic_client_jaas.conf"
+
+ 
+
+now you can start server, zookeeper and producer and consumers.
+
+./kafka-console-producer --broker-list localhost:9097 --producer.config ../etc/kafka/producer.properties --topic logs
+
+ 
+
+./kafka-console-consumer  --bootstrap-server localhost:9097   --topic logs  --from-beginning --consumer.config ../etc/kafka/consumer.properties  
+
+ 
+
+start kafka -rest :
+
+ ./kafka-rest-start ../etc/kafka-rest/kafka-rest_SASL_SSL.properties 
+
+ 
+
+create topic:
+
+./kafka-topics --zookeeper localhost:2181 --create --topic test8  --partitions 1 --replication-factor 1 
+
+create acl:
+
+./kafka-acls --add --allow-principal User:shamim --authorizer kafka.security.auth.SimpleAclAuthorizer --authorizer-properties zookeeper.connect=localhost:2181  --allow-host localhost --operation Read --operation Write --topic test8
+
+dding ACLs for resource `Topic:test8`: 
+User:shamim has Allow permission for operations: Read from hosts: localhost
+User:shamim has Allow permission for operations: Write from hosts: localhost
+
+Current ACLs for resource `Topic:test8`: 
+User:shamim has Allow permission for operations: Read from hosts: localhost
+User:shamim has Allow permission for operations: Write from hosts: localhost
+
+ 
+
+Successfully able to produce, consume, get and post message.
+
+ 
+
+ Issue with LDAP auth:
+
+https://docs.confluent.io/current/confluent-security-plugins/kafka/quickstart.html
