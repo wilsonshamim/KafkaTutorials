@@ -1,0 +1,108 @@
+Add below properties in server.properties:
+security.inter.broker.protocol=SASL_PLAINTEXT
+sasl.mechanism.inter.broker.protocol=PLAIN
+sasl.enabled.mechanisms=PLAIN
+
+authorizer.class.name=kafka.security.auth.SimpleAclAuthorizer
+allow.everyone.if.no.acl.found=true
+auto.create.topics.enable=false
+broker.id=0
+listeners=SASL_PLAINTEXT://localhost:9092
+advertised.listeners=SASL_PLAINTEXT://localhost:9092
+num.network.threads=3
+num.io.threads=8
+socket.send.buffer.bytes=102400
+socket.receive.buffer.bytes=102400
+socket.request.max.bytes=104857600
+
+advertised.host.name=localhost
+num.partitions=1
+num.recovery.threads.per.data.dir=1
+log.flush.interval.messages=30000000
+log.flush.interval.ms=1800000
+log.retention.minutes=30
+log.segment.bytes=1073741824
+log.retention.check.interval.ms=300000
+delete.topic.enable=true
+zookeeper.connect=localhost:2181
+zookeeper.connection.timeout.ms=6000
+super.users=User:admin
+
+zookeeper.properties
+
+dataDir=/tmp/zookeeper
+clientPort=2181
+maxClientCnxns=0
+authProvider.1=org.apache.zookeeper.server.auth.SASLAuthenticationProvider
+requireClientAuthScheme=sasl
+jaasLoginRenew=3600000
+
+producer.properties
+
+security.protocol=SASL_PLAINTEXT
+sasl.mechanism=PLAIN
+bootstrap.servers=localhost:9092
+compression.type=none
+consumer.properties
+
+security.protocol=SASL_PLAINTEXT
+sasl.mechanism=PLAIN
+zookeeper.connect=localhost:2181
+zookeeper.connection.timeout.ms=6000
+group.id=test-consumer-group
+
+Now are the most important files for making your server starting without any issue:
+
+zookeeper_jaas.conf
+
+Server {
+   org.apache.kafka.common.security.plain.PlainLoginModule required
+   username="admin"
+   password="admin-secret"
+   user_admin="admin-secret";
+};
+kafka_server.jaas
+
+KafkaServer {
+   org.apache.kafka.common.security.plain.PlainLoginModule required
+   username="admin"
+   password="admin-secret"
+   user_admin="admin-secret";
+};
+
+Client {
+   org.apache.kafka.common.security.plain.PlainLoginModule required
+   username="admin"
+   password="admin-secret";
+};
+ 
+
+kafka_client_jaas.conf
+
+KafkaClient {
+  org.apache.kafka.common.security.plain.PlainLoginModule required
+  username="admin"
+  password="admin-secret";
+};
+
+add the below properties in zookeeper-server-start
+
+export KAFKA_OPTS="-Djava.security.auth.login.config=../etc/kafka/zookeeper_jaas.conf"
+
+add the below properties in kafka-server-start
+
+export KAFKA_OPTS="-Djava.security.auth.login.config=../etc/kafka/kafka_server_jaas.conf"
+
+add the below properties in kafka-console-producer and kafka-console-consumer
+
+export KAFKA_OPTS="-Djava.security.auth.login.config=../etc/kafka/kafka_client_jaas.conf"
+
+ 
+
+now you can start server, zookeeper and producer and consumers.
+
+./kafka-console-producer --broker-list localhost:9097 --producer.config ../etc/kafka/producer.properties --topic logs
+
+ 
+
+./kafka-console-consumer  --bootstrap-server localhost:9097   --topic logs  --from-beginning --consumer.config ../etc/kafka/consumer.properties  
