@@ -1,12 +1,7 @@
 Generate the keys using the below commands in a sequence:
 
- 
-
 kafka.server.keystore.jks will have public and private key
-
 keytool -keystore /home/shamim/Confluent/security/kafka.server.keystore.jks -alias localhost -validity 365 -genkey -keyalg RSA
-
- 
 
 openssl req -new -x509 -keyout /home/shamim/Confluent/security/ca-key -out /home/shamim/Confluent/security/ca-cert -days 365
 
@@ -20,22 +15,16 @@ openssl x509 -req -CA /home/shamim/Confluent/security/ca-cert -CAkey /home/shami
 keytool -keystore /home/shamim/Confluent/security/kafka.server.keystore.jks -alias CARoot -import -file /home/shamim/Confluent/security/ca-cert
 keytool -keystore /home/shamim/Confluent/security/kafka.server.keystore.jks -alias localhost -import -file /home/shamim/Confluent/security/cert-signed
 
- 
-
 how to test if the keys generated are correct and valid:
 
 start the kafka server using the keys and run the below command:
 
- 
 
  openssl s_client -debug -connect localhost:9094 -tls1      
 
 we should see lines like below:
-
- 
-
 q+40p+XHBxiAr/zKYTTIabFDK72edg3hfUbW3ZuPw3EedSd48QC6nEsQzfpMc/Xn JGhYl7SEY2iFp5PmjJz2nXkhPUmgwsE=
 
------END CERTIFICATE----- subject=/C=US/ST=NJ/L=BRN/O=TEST/OU=TEST/CN=localhost
+-----END CERTIFICATE----- subject=/C=US/ST=NJ/L=BB/O=TEST/OU=TEST/CN=localhost
 
-issuer=/C=US/ST=NJ/L=BRN/O=TEST/OU=TEST/CN=localhost/emailAddress=wilson.shamim@TEST.com
+issuer=/C=US/ST=NJ/L=BRN/O=TEST/OU=TEST/CN=localhost/emailAddress=test@TEST.com
