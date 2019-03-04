@@ -1,0 +1,125 @@
+Step 1:
+
+download the zip file from https://www.confluent.io/connector/kafka-connect-mqtt/
+you will see lib folder and and etc folders.
+in the confluent_home/etc create a folder kafka-connect-mqtt
+copy all the folder from etc → kafka-connect-mqtt
+in the soure ../etc/kafka-connect-mqtt/source-anonymous.properties add the below properties
+
+name=anonymous
+tasks.max=1
+connector.class=io.confluent.connect.mqtt.MqttSourceConnector
+mqtt.server.uri=tcp://localhost:1883
+mqtt.topics=/sensor/presence/
+#mqtt.topics=temperature
+kafka.topic=topic23
+
+
+
+
+In the standalone properties file add below lines
+value.converter=org.apache.kafka.connect.converters.ByteArrayConverter
+
+key.converter=org.apache.kafka.connect.json.JsonConverter
+converter.encoding=UTF-8
+value.converter.schemas.enable=true
+
+plugin.path=share/java,/home/shamim/Confluent/confluent-5.0.0/share/java/kafka-connect-jdbc
+
+from the confluent_home/bin run
+./connect-standalone ../etc/kafka/connect-standalone.properties ../etc/kafka-connect-mqtt/source-anonymous.properties
+
+
+
+now you can start seeing the data on the topic topic23
+
+
+Step 2: 
+
+Using python 
+
+import paho.mqtt.client as mqtt
+
+from kafka import KafkaProducer
+
+import time
+import paho.mqtt.client as paho
+broker="hostname"
+
+client= paho.Client("client-001") 
+client.username_pw_set("****","****")
+client.connect(broker)
+#client.publish("hello-mqtt", "Hello world!");
+
+import json
+
+
+def on_connect(client, userdata, flags, rc):
+    print("Connected with result code " + str(rc))
+    client.subscribe("hello-mqtt")
+
+
+def on_message(client, userdata, msg):
+    print("Recived message!",msg.payload.decode())
+    print("---",msg.payload);
+    producer = KafkaProducer(bootstrap_servers='localhost:9092')
+    producer.send('hello-mqtt-kafka', value=msg.payload)
+    producer.close()
+
+
+client.on_connect = on_connect
+client.on_message = on_message
+
+client.loop_forever()
+client.disconnect();
+
+
+
+
+--------------------------
+
+
+
+from kafka import KafkaProducer
+import paho.mqtt.client as paho
+import json
+
+broker="localhost"
+
+client1= paho.Client("client-001")
+client1.connect(broker)
+
+
+def on_connect(client1, userdata, flags, rc):
+    print("Connected with result code " + str(rc))
+    client1.subscribe("mqtttopic1")
+    client1.subscribe("mqtttopic2")
+    client1.subscribe("mqtttopic3")
+
+def on_message(client1, userdata, msg):
+    print("Presence data received",msg.payload.decode())
+
+
+    producer = KafkaProducer(bootstrap_servers='localhost:9092')
+    try:
+        jmsg = json.loads(msg.payload.decode())
+        print("json msg uuid!", jmsg["uuid"].encode())
+        if 'presenceDetected' in jmsg:
+            producer.send('presencetopic', value=msg.payload,key=jmsg["uuid"].encode())
+        if 'pulse' in jmsg:
+            producer.send('pulsetopic', value=msg.payload,key=jmsg["uuid"].encode())
+        else:
+            producer.send('firstboottopic', value=msg.payload, key=jmsg["uuid"].encode())
+    except:
+        print("some er")
+    producer.close()
+
+
+
+
+
+client1.on_connect = on_connect
+client1.on_message = on_message
+
+client1.loop_forever()
+client1.disconnect();
