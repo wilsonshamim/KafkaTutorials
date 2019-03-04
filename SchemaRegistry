@@ -105,3 +105,252 @@ http://localhost:8085/schemas/ids/41
 
 
 
+Why Schema Registry?
+Consumer has its schema which could be different than the producers.
+The consumer schema is the schema the consumer is expecting the record/message to conform to. With the Schema Registry a compatibility check is performed and if the two schemas don’t match but are compatible, then the payload transformation happens via Avro Schema Evolution.
+Kafka records can have a Key and a Value and both can have a schema.
+
+
+Schema Registry Operations
+The Schema Registry can store schemas for keys and values of Kafka records.
+It can also list schemas by subject.
+It can list all versions of a subject (schema).
+It can retrieve a schema by version or id.
+It can get the latest version of a schema.
+Importantly, the Schema Registry can check to see if schema is compatible with a certain version. There is a compatibility level (BACKWARDS, FORWARDS, FULL, NONE) setting for the Schema Registry and an individual subject.
+You can manage schemas via a REST API with the Schema registry.
+Schema Registry Schema Compatibility Settings
+Backward compatibility means data written with older schema is readable with a newer schema.
+ Forward compatibility means data written with newer schema is readable with old schemas. 
+Full compatibility means a new version of a schema is backward and forward compatible. 
+None disables schema validation and it not recommended. If you set the level to none then Schema Registry just stores the schema and Schema will not be validated for compatibility at all.
+Schema Registry Config
+The Schema compatibility checks can is configured globally or per subject.
+
+The compatibility checks value is one of the following:
+
+NONE - don’t check for schema compatibility
+FORWARD - check to make sure last schema version is forward compatible with new schemas
+BACKWARDS (default) - make sure new schema is backwards compatible with latest
+FULL - make sure new schema is forwards and backwards compatible from latest to new and from new to latest
+Schema Evolution
+If an Avro schema is changed after data has been written to store using an older version of that schema, then Avro might do a Schema Evolution when you try to read that data.
+
+From Kafka perspective, Schema evolution happens only during deserialization at Consumer (read). If Consumer’s schema is different from Producer’s schema, then value or key is automatically modified during deserialization to conform to consumers reader schema if possible.
+
+Avro schema evolution is an automatic transformation of Avro schema between the consumer schema version and what the schema the producer put into the Kafka log. When Consumer schema is not identical to the Producer schema used to serialize the Kafka Record, then a data transformation is performed on the Kafka record’s key or value. If the schemas match then no need to do a transformation
+
+Allowed Modification During Schema Evolution
+You can add a field with a default to a schema. You can remove a field that had a default value. You can change a field’s order attribute. You can change a field’s default value to another value or add a default value to a field that did not have one. You can remove or add a field alias (keep in mind that this could break some consumers that depend on the alias). You can change a type to a union that contains original type. If you do any of the above, then your schema can use Avro’s schema evolution when reading with an old schema.
+
+Rules of the Road for modifying Schema
+If you want to make your schema evolvable, then follow these guidelines. Provide a default value for fields in your schema as this allows you to delete the field later. Never change a field’s data type. When adding a new field to your schema, you have to provide a default value for the field. Don’t rename an existing field (use aliases instead). You can add an alias
+
+
+
+Let’s use an example to talk about this. The following example is from our Avro tutorial.
+
+Employee example Avro Schema
+{"namespace": "com.cloudurable.phonebook",
+  "type": "record",
+  "name": "Employee",
+  "doc" : "Represents an Employee at a company",
+  "fields": [
+    {"name": "firstName", "type": "string", "doc": "The persons given name"},
+    {"name": "nickName", "type": ["null", "string"], "default" : null},
+    {"name": "lastName", "type": "string"},
+    {"name": "age",  "type": "int", "default": -1},
+    {"name": "emails", "default":[], "type":{"type": "array", "items": "string"}},
+    {"name": "phoneNumber",  "type":
+    [ "null",
+      { "type": "record",   "name": "PhoneNumber",
+        "fields": [
+          {"name": "areaCode", "type": "string"},
+          {"name": "countryCode", "type": "string", "default" : ""},
+          {"name": "prefix", "type": "string"},
+          {"name": "number", "type": "string"}
+        ]
+      }
+    ]
+    },
+    {"name":"status", "default" :"SALARY", "type": { "type": "enum", "name": "Status",
+      "symbols" : ["RETIRED", "SALARY", "HOURLY", "PART_TIME"]}
+    }
+  ]
+}
+Avro Schema Evolution Scenario
+Let’s say our Employee record did not have an age in version 1 of the schema and then later we decided to add an age field with a default value of -1. Now let’s say we have a Producer using version 2 of the schema with age, and a Consumer using version 1 with no age.
+
+The Producer uses version 2 of the Employee schema and creates a com.cloudurable.Employee record, and sets age field to 42, then sends it to Kafka topic new-employees. The Consumer consumes records from new-employees using version 1 of the Employee Schema. Since Consumer is using version 1 of the schema, the age field gets removed during deserialization.
+
+The same consumer modifies some records and then writes the record to a NoSQL store. When the Consumer does this, the age field is missing from the record that it writes to the NoSQL store. Another client using version 2 of the schema which has the age, reads the record from the NoSQL store. The age field is missing from the record because the Consumer wrote it with version 1, thus the client reads the record and the age is set to default value of -1.
+
+If you added the age and it was not optional, i.e., the age field did not have a default, then the Schema Registry could reject the schema, and the Producer could never it add it to the Kafka log.
+
+Using REST Schema Registry REST API
+Recall that the Schema Registry allows you to manage schemas using the following operations:
+
+store schemas for keys and values of Kafka records
+List schemas by subject.
+list all versions of a subject (schema).
+Retrieves a schema by version
+Retrieves a schema by id
+Retrieve the latest version of a schema
+Perform compatibility checks
+Set compatibility level globally
+Set compatibility level globally
+Recall that all of this is available via a REST API with the Schema Registry.
+
+
+
+Sample Demo:
+
+Step 1: Create an avro file with schema 
+
+{ "type": "record", "name": "Person", "namespace": "com.test", "fields": [ { "name": "firstName", "type": "string" }, { "name": "lastName", "type": "string" }, { "name": "birthDate", "type": "long" }, { "name": "address", "type": "long" },{"name":"edu","type":["null", "string"],"default":null}  ]}
+
+
+
+Step 2: use avro-tool to compile the schema file and generate a class
+
+java -jar avro-tools-1.7.7.jar compile schema AvroProject\Person.avsc <Target Folder>
+
+This will generate a java class. Copy the class and place in the Project in eclipse.
+
+Step 3: Write Producer and consumer code below
+
+Producer Avro:
+
+import io.confluent.kafka.serializers.KafkaAvroSerializerConfig;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.serialization.LongSerializer;
+import io.confluent.kafka.serializers.KafkaAvroSerializer;
+
+import java.util.Properties;
+import java.util.stream.IntStream;
+
+public class ProducerAvro {
+
+private static Producer<Long, Person> createProducer() {
+Properties props = new Properties();
+props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+props.put(ProducerConfig.CLIENT_ID_CONFIG, "AvroProducer");
+props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
+LongSerializer.class.getName());
+
+// Configure the KafkaAvroSerializer.
+props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+KafkaAvroSerializer.class.getName());
+
+// Schema Registry location.
+props.put(KafkaAvroSerializerConfig.SCHEMA_REGISTRY_URL_CONFIG,
+"http://localhost:8081");
+
+return new KafkaProducer<>(props);
+}
+
+private final static String TOPIC = "persons-avro";
+
+public static void main(String... args) {
+
+Producer<Long, Person> producer = createProducer();
+
+Person bob = Person.newBuilder().setFirstName("Wilson")
+.setLastName("Jones")
+.setAddress(5)
+.setBirthDate(66)
+.build();
+
+IntStream.range(1, 100).forEach(index->{
+producer.send(new ProducerRecord<>(TOPIC, 1L * index, bob));
+
+});
+
+producer.flush();
+producer.close();
+}
+
+}
+
+Step 4: Consumer Code 
+
+
+import io.confluent.kafka.serializers.KafkaAvroDeserializer;
+import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig;
+import org.apache.kafka.clients.consumer.Consumer;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.serialization.LongDeserializer;
+
+import java.util.Collections;
+import java.util.Properties;
+import java.util.stream.IntStream;
+
+public class ConsumerAvro {
+
+private final static String BOOTSTRAP_SERVERS = "localhost:9092";
+private final static String TOPIC = "persons-avro";
+
+private static Consumer<Long, Person> createConsumer() {
+Properties props = new Properties();
+props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
+props.put(ConsumerConfig.GROUP_ID_CONFIG, "KafkaExampleAvroConsumer");
+props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
+LongDeserializer.class.getName());
+
+//Use Kafka Avro Deserializer.
+props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
+KafkaAvroDeserializer.class.getName()); //<----------------------
+
+//Use Specific Record or else you get Avro GenericRecord.
+props.put(KafkaAvroDeserializerConfig.SPECIFIC_AVRO_READER_CONFIG, "true");
+
+
+//Schema registry location.
+props.put(KafkaAvroDeserializerConfig.SCHEMA_REGISTRY_URL_CONFIG,
+"http://localhost:8081"); //<----- Run Schema Registry on 8081
+
+
+return new KafkaConsumer<>(props);
+}
+
+
+
+
+
+public static void main(String... args) {
+
+final Consumer<Long, Person> consumer = createConsumer();
+consumer.subscribe(Collections.singletonList(TOPIC));
+
+IntStream.range(1, 100).forEach(index -> {
+
+final ConsumerRecords<Long, Person> records =
+consumer.poll(1000);
+
+if (records.count() == 0) {
+System.out.println("None found");
+} else records.forEach(record -> {
+
+Person employeeRecord = record.value();
+
+System.out.printf("%s %d %d %s \n", record.topic(),
+record.partition(), record.offset(), employeeRecord);
+});
+});
+}
+
+
+}
+
+
+
+Run the code and u can see output:
+
+
+
+
