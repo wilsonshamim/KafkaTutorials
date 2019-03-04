@@ -1,0 +1,78 @@
+Generate the keys as defined at  13. Create Public and Private key for SSL
+add below properties in the kafkaserver.properties
+listeners=SSL://localhost:9099
+security.inter.broker.protocol=SSL
+advertised.listeners=SSL://localhost:9099
+advertised.host.name=localhost
+security.protocol=SSL
+
+auto.create.topics.enable=false
+auto.leader.rebalance.enable=true
+delete.topic.enable=true
+controlled.shutdown.enable=true
+
+ssl.keystore.location=/home/shamim/Confluent/security/kafka.server.keystore.jks
+ssl.keystore.password=pwd
+ssl.key.password=pwd
+ssl.truststore.location=/home/shamim/Confluent/security/kafka.server.truststore.jks
+ssl.truststore.password=pwd
+
+listener.security.protocol.map=SSL:SSL,PLAINTEXT:PLAINTEXT,SASL_SSL:SASL_SSL
+num.network.threads=3
+num.io.threads=8
+socket.send.buffer.bytes=102400
+socket.receive.buffer.bytes=102400
+socket.request.max.bytes=104857600
+log.dirs=/tmp/kafka-logs-2
+num.partitions=1
+num.recovery.threads.per.data.dir=1
+log.retention.hours=168
+zookeeper.connect=localhost:2181
+zookeeper.connection.timeout.ms=600
+confluent.support.customer.id=anonymous
+
+
+#client.security.protocol=SSL
+#listener.security.protocol=SASL_SSL
+#ssl.protocol=TLSv1.1
+ssl.enabled.protocols=TLSv1.2,TLSv1.1,TLSv1
+ssl.truststore.type=JKS
+ssl.keystore.type = JKS
+#client.ssl.key.password=tibcobw
+ssl.client.auth = none
+#ssl.client.auth=required
+#security.inter.broker.protocol = SSL
+ssl.secure.random.implementation=SHA1PRNG
+ssl.cipher.suites=TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256
+
+
+
+if Authentication is needed we need to set as ssl.client.auth=required
+
+After starting kafka server with SSL, we need to create a property file client-ssl.properties with below properties and call producer and consumer as below
+
+if no auth needed then below prop is enough
+  client-ssl.properties
+
+  bootstrap.servers=localhost:9099
+ security.protocol=SSL
+ ssl.truststore.location=/home/shamim/Confluent/security/kafka.client.truststore.jks
+ ssl.truststore.password=****
+
+
+
+if auth is needed then we need to set
+
+bootstrap.servers=localhost:9099
+security.protocol=SSL
+ssl.truststore.location=/home/shamim/Confluent/security/kafka.client.truststore.jks
+ssl.truststore.password=****
+ssl.keystore.location=/home/shamim/Confluent/security/kafka.server.keystore.jks
+ssl.keystore.password=***
+ssl.key.password=***
+
+./kafka-console-consumer --bootstrap-server localhost:9099 --topic t1 --from-beginning --consumer.config ../etc/kafka/client-ssl.properties
+
+./kafka-console-consumer --bootstrap-server localhost:9099 --topic t1 --from-beginning --consumer.config ../etc/kafka/client-ssl.properties           
+
+if Authentication is success we will see the output like 
