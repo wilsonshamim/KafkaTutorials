@@ -1,0 +1,57 @@
+
+update kafka-rest.properties at CONFLUENT_HOME/etc/kafka-rest
+
+bootstrap.servers = SSL://localhost:9094
+ssl.key.password = ***
+ssl.truststore.password = ****
+ssl.truststore.location = /home/shamim/Confluent/security/truststore/kafka.truststore.jks
+ssl.keystore.location = /home/shamim/Confluent/security/keystore/kafka.keystore.jks
+ssl.keystore.password=****
+
+security.protocol=SSL
+ssl.protocol=TLSv1.1
+ssl.enabled.protocols=TLSv1.2,TLSv1.1,TLSv1
+ssl.truststore.type=JKS
+ssl.truststore.type = JKS
+client.ssl.key.password=pwd
+listeners = https://localhost:8086
+security.inter.broker.protocol = SSL
+
+ 
+
+client.ssl.key.password = pwd
+client.ssl.truststore.password = pwd
+client.ssl.truststore.location = /home/shamim/Confluent/security/kafka.server.truststore.jks
+client.ssl.keystore.location = /home/shamim/Confluent/security/kafka.server.keystore.jks
+client.ssl.keystore.password=pwd
+
+
+client.security.protocol=SSL
+client.ssl.protocol=TLSv1.1
+client.ssl.enabled.protocols=TLSv1.2,TLSv1.1,TLSv1
+client.ssl.keystore.type=JKS
+client.ssl.truststore.type = JKS
+
+
+
+
+start kafka using the below command
+nohup ./kafka-rest-start ../etc/kafka-rest/kafka-rest.properties 2>&1 > /home/shamim/Confluent/logs/kafkarestproxy.log &
+
+verify the status of the kafka in the log file /home/shamim/Confluent/kafkaproxy.log. you should not see any error.
+
+
+we will also see details :
+[2017-08-08 09:40:11,191] INFO Started NetworkTrafficServerConnector@61c9c3fd{SSL-HTTP/1.1}{localhost:8086} (org.eclipse.jetty.server.NetworkTrafficServerConnector:266)
+
+ 
+you can run the below command to validate if all the keys are OK and connection is successfull
+
+openssl s_client -debug -connect localhost:8086 -tls1
+
+now use the below url in the soapui to view all the topics:
+https://localhost:8086/topics
+
+
+To view any topic details:
+https://localhost:8086/topics/topicname
