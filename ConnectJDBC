@@ -1,0 +1,40 @@
+Kafka connect JDBC:
+
+used oracle db to connect :
+update the properties files:
+../etc/kafka-connect-jdbc/source-quickstart-sqlite.properties
+connection.url=jdbc:oracle:thin:@hostname:25881:SID
+#connection.url=jdbc:mysql://test:3306/test
+connection.user=<<username>>
+connection.password=PWD
+query=select * from test mode=incrementing
+incrementing.column.name=id
+topic.prefix=test-sqlite-jdbc-
+2. run the command: 
+./connect-standalone ../etc/schema-registry/schema-registry.properties ../etc/kafka-connect-jdbc/source-quickstart-sqlite.properties
+
+Sink:
+
+ ./connect-standalone ../etc/schema-registry/connect-avro-standalone.properties ../etc/kafka-connect-jdbc/sink-quickstart-sqlite.properties
+
+name=test-sink
+connector.class=io.confluent.connect.jdbc.JdbcSinkConnector
+tasks.max=2
+topics=TEST1
+connection.url=jdbc:oracle:thin:@hostname:25881:SID
+connection.user=username
+connection.password=****
+auto.create=true
+insert.mode=insert
+
+
+publish:
+
+$ ./kafka-avro-console-producer --broker-list localhost:9092 --topic TEST1 --property value.schema='{"type":"record","name":"myrecord","fields":[{"name":"ID","type":"int"},{"name":"NAME", "type": "string"}]}'
+
+{"ID":1,"NAME":"Shamim"}
+
+
+create table TEST1(ID NUMBER, name varchar2(100))
+
+select * from TEST1;
