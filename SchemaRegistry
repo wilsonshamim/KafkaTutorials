@@ -1,0 +1,107 @@
+Schema Registry provides a serving layer for your metadata. It provides a RESTful interface for storing and retrieving Avro schemas. It stores a versioned history of all schemas, provides multiple compatibility settings and allows evolution of schemas according to the configured compatibility settings and expanded Avro support. It provides serializers that plug into Kafka clients that handle schema storage and retrieval for Kafka messages that are sent in the Avro format.
+
+Schema Registry is a distributed storage layer for Avro Schemas which uses Kafka as its underlying storage mechanism. Some key design decisions:
+
+Assigns globally unique ID to each registered schema. Allocated IDs are guaranteed to be monotonically increasing but not necessarily consecutive.
+Kafka provides the durable backend, and functions as a write-ahead changelog for the state of Schema Registry and the schemas it contains.
+Schema Registry is designed to be distributed, with single-master architecture, and ZooKeeper/Kafka coordinates master election (based on the configuration).
+ 
+
+Start Schema Registry without SSL(PLAINText):
+add below properties in CONFLUENT_HOME/etc/schema-registry/schema-registry.properties
+
+listeners=http://0.0.0.0:8081
+
+kafkastore.connection.url=localhost:2181
+kafkastore.topic=_schemas
+
+key.converter=org.apache.kafka.connect.json.JsonConverter
+value.converter=org.apache.kafka.connect.json.JsonConverter
+key.converter.schemas.enable=false
+value.converter.schemas.enable=false
+internal.key.converter=org.apache.kafka.connect.json.JsonConverter
+internal.value.converter=org.apache.kafka.connect.json.JsonConverter
+internal.key.converter.schemas.enable=false
+internal.value.converter.schemas.enable=false
+offset.storage.file.filename=/tmp/connect.offsets
+offset.flush.interval.ms=10000
+
+Start Schema Registry with SSL
+
+add below properties in CONFLUENT_HOME/etc/schema-registry/schema-registry.properties
+
+listeners=https://0.0.0.0:8085
+
+kafkastore.connection.url=localhost:2181
+kafkastore.topic=_schemas
+
+key.converter=org.apache.kafka.connect.json.JsonConverter
+value.converter=org.apache.kafka.connect.json.JsonConverter
+key.converter.schemas.enable=false
+value.converter.schemas.enable=false
+internal.key.converter=org.apache.kafka.connect.json.JsonConverter
+internal.value.converter=org.apache.kafka.connect.json.JsonConverter
+internal.key.converter.schemas.enable=false
+internal.value.converter.schemas.enable=false
+offset.storage.file.filename=/tmp/connect.offsets
+offset.flush.interval.ms=10000
+
+bootstrap.servers=localhost:9095
+kafkastore.security.protocol=SSL
+security.protocol=SSL
+kafkastore.ssl.truststore.location=/home/shamim/Confluent/security/kafka.server.truststore.jks
+kafkastore.ssl.truststore.password=pwd
+ssl.enabled.protocols=TLSv1.2,TLSv1.1,TLSv1
+ssl.truststore.type=JKS
+ssl.truststore.type = JKS
+
+ 
+
+ssl.truststore.location =/home/shamim/Confluent/security/kafka.server.truststore.jks
+ssl.truststore.password=pwd
+ssl.keystore.password=pwd
+ssl.keystore.location=/home/shamim/Confluent/security/kafka.server.keystore.jks
+ssl.key.password=pwd
+
+3. run the below command:
+
+ ./schema-registry-start /home/shamim/Confluent/confluent-3.2.2/etc/schema-registry/schema-registry.properties
+
+4. After schema registry is successfully started , we can see below lines in debug:
+
+[2017-08-13 08:16:52,468] WARN Ignoring Kafka broker endpoint PLAINTEXT://localhost:9092 that does not match the setting for kafkastore.security.protocol=SSL (io.confluent.kafka.schemaregistry.storage.KafkaStore:301)
+[2017-08-13 08:16:52,469] INFO Initializing KafkaStore with broker endpoints: SSL://localhost:9095 (io.confluent.kafka.schemaregistry.storage.KafkaStore:131)
+[2017-08-13 08:16:52,486] WARN The replication factor of the schema topic _schemas is less than the desired one of 3. If this is a production environment, it's crucial to add more brokers 
+[2017-08-13 08:16:54,303] INFO Started NetworkTrafficServerConnector@1ce61929{SSL-HTTP/1.1}{0.0.0.0:8085} (org.eclipse.jetty.server.NetworkTrafficServerConnector:266)
+
+
+
+
+
+Now we can use the url to see the list of all the schemas
+
+
+
+http://localhost:8085/
+
+
+
+we can now register the schema as below:
+
+curl -X POST -H "Content-Type: application/vnd.schemaregistry.v1+json" --data '{"schema": "{\"type\": \"string\"}"}' http://localhost:8085/subjects/Kafka-key/versions
+
+
+
+curl -X POST -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+--data '{ "schema": "{ \"type\": \"record\", \"name\": \"Person\", \"namespace\": \"com.ippontech.kafkatutorials\", \"fields\": [ { \"name\": \"firstName\", \"type\": \"string\" }, { \"name\": \"lastName\", \"type\": \"string\" }, { \"name\": \"birthDate\", \"type\": \"long\" } ]}" }' \
+http://localhost:8081/subjects/persons-avro-value/versions
+
+curl -X POST -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+--data '{ "schema": "{ \"type\": \"record\", \"name\": \"Person\", \"namespace\": \"com.ippontech.kafkatutorials\", \"fields\": [ { \"name\": \"id\", \"type\": \"string\" }, { \"name\": \"name\", \"type\": \"string\" } ]}" }' \
+http://localhost:8085/subjects/persons-avro-value/versions
+
+to fetch the schemas:
+http://localhost:8085/schemas/ids/41
+
+
+
