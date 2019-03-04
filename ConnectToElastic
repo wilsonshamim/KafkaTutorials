@@ -1,0 +1,51 @@
+Kafka Connect to Elastic:
+
+update the quickstart-elasticsearch.properties file at CONFLUENT_HOME/etc/kafka-connect-elasticsearch/ with below values
+name=mycluster
+connector.class=io.confluent.connect.elasticsearch.ElasticsearchSinkConnector
+tasks.max=1
+#topic.name=test
+topics=logs
+key.ignore=true
+connection.url=http://hostname:9200
+#connect.cluster.name=mycluster
+type.name=LOG1
+schema.ignore=true
+topic.index.map=logs:logs_index
+key.converter=org.apache.kafka.connect.json.JsonConverter
+value.converter=org.apache.kafka.connect.json.JsonConverter
+key.converter.schemas.enable=false
+value.converter.schemas.enable=false
+internal.key.converter=org.apache.kafka.connect.json.JsonConverter
+internal.value.converter=org.apache.kafka.connect.json.JsonConverter
+internal.key.converter.schemas.enable=false
+internal.value.converter.schemas.enable=false
+offset.storage.file.filename=/tmp/connect.offsets
+offset.flush.interval.ms=10000
+#topic.index.map=test:logs_index
+#schema.ignore=true
+use the below command to start the kafka-connect for elastic:
+ ./connect-standalone ../etc/schema-registry/schema-registry.properties ../etc/kafka-connect-elasticsearch/quickstart-elasticsearch.properties
+
+3. you will see that kafka connect to elastic search is started.
+
+4. at elastic : start the elastic with below details:
+
+bin\elasticsearch.bat -Ecluster.name=mycluster -Enode.name=mynode1
+
+5. start kibana
+
+6. create an index logs_index with type LOG1
+
+7. start producer ./kafka-console-producer --broker-list localhost:9092 --topic logs
+
+8. sent message :
+
+{"cname":"aaaa"}
+{"cname":"shamim wilson"}
+{"cname":"Connected To Elastic"}
+{"cname":"connected"}
+
+
+we can see the same data into elastic
+
