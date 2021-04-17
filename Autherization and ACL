@@ -1,0 +1,64 @@
+Overview
+Kafka ships with a pluggable Authorizer and an out-of-box authorizer implementation that uses ZooKeeper to store all the ACLs. It is important to set ACLs because otherwise access to resources is limited to super users when an authorizer is configured. The default behavior is such that if a resource has no associated ACLs, then no one is allowed to access the resource, except super users. It is possible to change this behavior, as we discuss below.
+
+Kafka ACLs are defined in the general format of “Principal P is [Allowed/Denied] Operation O From Host H On Resource R”. The following table describes the relationship between operations, resources and APIs:
+
+ 
+
+ALTER	Topic	AlterTopics (Will be introduced in a future release)
+CLUSTER_ACTION	Cluster	LeaderAndIsr
+CLUSTER_ACTION	Cluster	StopReplica
+CLUSTER_ACTION	Cluster	UpdateMetadata
+CLUSTER_ACTION	Cluster	ControlledShutdown
+CREATE	Cluster	CreateTopics (Will be introduced in a future release)
+CREATE	Cluster	Metadata if auto.create.topics.enable
+DELETE	Topic	DeleteTopics (Will be introduced in a future release)
+DESCRIBE	Topic	Offsets
+DESCRIBE	Topic	Metadata
+DESCRIBE	Cluster	ListGroups
+DESCRIBE	Group	DescribeGroup
+READ	Group	GroupCoordinator
+READ	Group	Heartbeat
+READ	Group	JoinGroup
+READ	Group	LeaveGroup
+READ	Group	OffsetCommit
+READ	Group	OffsetFetch
+READ	Group	SyncGroup
+READ	Topic	Fetch
+READ	Topic	GroupCoordinator
+READ	Topic	OffsetCommit
+READ	Topic	OffsetFetch
+WRITE	Topic	Produce
+ 
+
+ 
+
+bin/kafka-acls --authorizer-properties zookeeper.connect=localhost:2181 --add \
+   --allow-principal User:Bob --allow-principal User:Alice \
+   --allow-host 198.51.100.0 --allow-host 198.51.100.1 --operation Read --operation Write --topic Test-topic
+ 
+
+bin/kafka-acls --authorizer-properties zookeeper.connect=localhost:2181 --add \
+   --allow-principal User:* --allow-host * --deny-principal User:BadBob --deny-host 198.51.100.3 \
+   --operation Read --topic Test-topic
+ 
+
+bin/kafka-acls --authorizer-properties zookeeper.connect=localhost:2181 --remove \
+   --allow-principal User:Bob --allow-principal User:Alice \
+   --allow-host 198.51.100.0 --allow-host 198.51.100.1 \
+   --operation Read --operation Write --topic Test-topic
+bin/kafka-acls --authorizer-properties zookeeper.connect=localhost:2181 \
+
+   --list --topic Test-topic
+
+
+
+------------------------------------------------
+
+
+
+/opt/tibco/DEV/akd/core/2.0/bin/kafka-acls.sh --authorizer kafka.security.auth.SimpleAclAuthorizer --authorizer-properties zookeeper.connect=localhost:42181 --add --allow-principal User:prod --operation Write --topic test1
+
+/opt/tibco/DEV/akd/core/2.0/bin/kafka-acls.sh --authorizer kafka.security.auth.SimpleAclAuthorizer --authorizer-properties zookeeper.connect=localhost:42181 --add --allow-principal User:cons --operation Read --topic test1
+
+/opt/tibco/DEV/akd/core/2.0/bin/kafka-acls.sh --authorizer kafka.security.auth.SimpleAclAuthorizer --authorizer-properties zookeeper.connect=localhost:42181 --list
