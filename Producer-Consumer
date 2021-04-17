@@ -1,0 +1,26 @@
+
+Producer and consumer
+Start Producer:
+./kafka-console-producer --broker-list hostname.org.com:9095 --producer.config ../etc/kafka/^Coducer.properties  --topic test1    
+   
+Start Consumers:
+./kafka-console-consumer --bootstrap-server hostname.org.com:9095 --consumer.config ../etc/kafka/consumer.properties --topic test1 --from-beginning
+Create Topics
+./kafka-topics --zookeeper hostname.org.com:2181 ^Ccreate --topic test1  --partitions 1 --replication-factor 1 
+
+List topics:
+ ./kafka-topics --zookeeper localhost:2181 --list                                                              
+delete topics:
+./kafka-topics --zookeeper localhost:2181 --delete --topic logs
+
+
+Note: in order to delete the topics permanently , we need to enable the below property in server.properties.
+
+# Switch to enable topic deletion or not, default value is false 
+
+delete.topic.enable=true
+
+Describe a topic: ./kafka-topics --describe --zookeeper localhost:2181 --topic tibtopic2
+
+alter a topic
+/kafka-topics --alter --zookeeper localhost:2181 --topic tibtopic2 --partitions 3
